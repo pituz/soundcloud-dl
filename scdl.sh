@@ -243,27 +243,34 @@ fi
 command -v recode &>/dev/null || { echo "[!] Recode needs to be installed."; exit 1; }
 command -v eyeD3 &>/dev/null || { echo "[!] eyeD3 needs to be installed to write tags into mp3 file."; echo "[!] The script will skip this part..."; writags=0; }
 
-soundurl=$(echo "$1" | sed 's-.*soundcloud.com/-http://soundcloud.com/-' | cut -d "?" -f 1 | grep 'soundcloud.com')
+soundurl=$(echo "$1" | sed -n 's#^.*\(soundcloud.com/[^?]\+\).*$#http://\1#p')
 
 echo "[i] Using URL $soundurl"
 
-if [[ "$(echo "$soundurl" | cut -d "/" -f 4)" == "" ]] ; then
-    echo "[!] Bad URL!"
-    show_help 
-    exit 1
-elif [[ "$(echo "$soundurl" | cut -d "/" -f 4)" == "groups" ]] ; then
-    echo "[i] Detected download type : All song of the group"
-    downgroup "$soundurl"
-elif [[ "$(echo "$soundurl" | cut -d "/" -f 5)" == "" ]] ; then
-    echo "[i] Detected download type : All of one user's songs"
-    downallsongs "$soundurl"
-elif [[ "$(echo "$soundurl" | cut -d "/" -f 5)" == "sets" ]] && [[ "$(echo "$soundurl" | cut -d "/" -f 6)" == "" ]] ; then
-    echo "[i] Detected download type : All of one user's sets"
-    downallsets "$soundurl"
-elif [[ "$(echo "$soundurl" | cut -d "/" -f 5)" == "sets" ]] ; then
-    echo "[i] Detected download type : One single set"
-    downset "$soundurl"
-else
-    echo "[i] Detected download type : One single song"
-    downsong "$soundurl"
-fi
+case "$soundurl" in
+    http://soundcloud.com/groups/*)
+	echo "[i] Detected download type : All song of the group"
+	downgroup "$soundurl"
+	;;
+    http://soundcloud.com/*/sets/*)
+	echo "[i] Detected download type : One single set"
+	downset "$soundurl"
+	;;
+    http://soundcloud.com/*/sets)
+	echo "[i] Detected download type : All of one user's sets"
+	downallsets "$soundurl"
+	;;
+    http://soundcloud.com/*/*)
+	echo "[i] Detected download type : One single song"
+	downsong "$soundurl"
+	;;
+    http://soundcloud.com/*)
+	echo "[i] Detected download type : All of one user's songs"
+	downallsongs "$soundurl"
+	;;
+    *)
+	echo "[!] Bad URL!"
+	show_help
+	exit 1
+	;;
+esac
