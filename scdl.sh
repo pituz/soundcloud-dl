@@ -56,7 +56,7 @@ function downsong() { #Done!
     # DL
     echo ""
     if [ -e "$filename" ]; then
-        echo "[!] The song $filename has already been downloaded..."  && exit
+        echo "[!] The song $filename has already been downloaded..."  && return
     else
         echo "[-] Downloading $title..."
     fi
@@ -94,7 +94,7 @@ function downallsongs() {
             title=$(echo -e "$songs" | sed -n "$i"p | tr ">" "\n" | grep "</title" | cut -d "<" -f 1 | recode html..u8)
             filename=$(echo "$title".mp3 | tr '*/\?"<>|' '+       ' )
             if [ -e "$filename" ]; then
-                echo "[!] The song $filename has already been downloaded..."  && exit
+                echo "[!] The song $filename has already been downloaded..."  && continue
             fi
             artist=$(echo "$songs" | sed -n "$i"p | tr ">" "\n" | grep "</username" | cut -d "<" -f 1 | recode html..u8)
             genre=$(echo "$songs" | sed -n "$i"p | tr ">" "\n" | grep "</genre" | cut -d "<" -f 1 | recode html..u8)
@@ -156,7 +156,7 @@ function downset() {
         artist=$(echo "$page" | grep -A3 $id | grep byArtist | cut -d"\"" -f2 | recode html..u8)
         filename=$(echo "$title".mp3 | tr '*/\?"<>|' '+       ' )      
         if [ -e "$filename" ]; then
-            echo "[!] The song $filename has already been downloaded..."  && exit
+            echo "[!] The song $filename has already been downloaded..."  && continue
         else
             echo "[-] Downloading $title..."
         fi
