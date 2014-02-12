@@ -208,16 +208,17 @@ function downallsets() {
 }
 
 function show_help() {
-    echo ""
-    echo "[i] Usage: `basename $0` [url]"
-    echo "    With url like :"
-    echo "        http://soundcloud.com/user (Download all of one user's songs)"
-    echo "        http://soundcloud.com/user/song-name (Download one single song)"
-    echo "        http://soundcloud.com/user/sets (Download all of one user's sets)"
-    echo "        http://soundcloud.com/user/sets/set-name (Download one single set)"
-    echo ""
-    echo "   Downloaded file names like : "title.mp3""
-    echo ""
+    cat <<END
+[i] Usage: $(basename $0) [url]
+    With url like :
+        http://soundcloud.com/user (Download all of one user's songs)
+        http://soundcloud.com/user/song-name (Download one single song)
+        http://soundcloud.com/user/sets (Download all of one user's sets)
+        http://soundcloud.com/user/sets/set-name (Download one single set)
+
+   Downloaded file names like : title.mp3
+
+END
 }
 
 if [ -z "$1" ] || [ "$1" == "-h" ] || [ "$1" == "--help" ] ; then
