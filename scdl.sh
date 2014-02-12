@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Author: FlyinGrub
 # Check my github : https://github.com/flyingrub/soundcloud-dl
 # Share it if you like ;)
