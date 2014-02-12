@@ -209,7 +209,7 @@ function downallsets() {
 
 function show_help() {
     cat <<END
-[i] Usage: $(basename $0) [url]
+[i] Usage: $(basename $0) [url] ...
     With url like :
         http://soundcloud.com/user (Download all of one user's songs)
         http://soundcloud.com/user/song-name (Download one single song)
@@ -243,34 +243,37 @@ fi
 command -v recode &>/dev/null || { echo "[!] Recode needs to be installed."; exit 1; }
 command -v eyeD3 &>/dev/null || { echo "[!] eyeD3 needs to be installed to write tags into mp3 file."; echo "[!] The script will skip this part..."; writags=0; }
 
-soundurl=$(echo "$1" | sed -n 's#^.*\(soundcloud.com/[^?]\+\).*$#http://\1#p')
+while [ "$1" ]; do
+    soundurl=$(echo "$1" | sed -n 's#^.*\(soundcloud.com/[^?]\+\).*$#http://\1#p')
 
-echo "[i] Using URL $soundurl"
+    echo "[i] Using URL $soundurl"
 
-case "$soundurl" in
-    http://soundcloud.com/groups/*)
-	echo "[i] Detected download type : All song of the group"
-	downgroup "$soundurl"
-	;;
-    http://soundcloud.com/*/sets/*)
-	echo "[i] Detected download type : One single set"
-	downset "$soundurl"
-	;;
-    http://soundcloud.com/*/sets)
-	echo "[i] Detected download type : All of one user's sets"
-	downallsets "$soundurl"
-	;;
-    http://soundcloud.com/*/*)
-	echo "[i] Detected download type : One single song"
-	downsong "$soundurl"
-	;;
-    http://soundcloud.com/*)
-	echo "[i] Detected download type : All of one user's songs"
-	downallsongs "$soundurl"
-	;;
-    *)
-	echo "[!] Bad URL!"
-	show_help
-	exit 1
-	;;
-esac
+    case "$soundurl" in
+	http://soundcloud.com/groups/*)
+	    echo "[i] Detected download type : All song of the group"
+	    downgroup "$soundurl"
+	    ;;
+	http://soundcloud.com/*/sets/*)
+	    echo "[i] Detected download type : One single set"
+	    downset "$soundurl"
+	    ;;
+	http://soundcloud.com/*/sets)
+	    echo "[i] Detected download type : All of one user's sets"
+	    downallsets "$soundurl"
+	    ;;
+	http://soundcloud.com/*/*)
+	    echo "[i] Detected download type : One single song"
+	    downsong "$soundurl"
+	    ;;
+	http://soundcloud.com/*)
+	    echo "[i] Detected download type : All of one user's songs"
+	    downallsongs "$soundurl"
+	    ;;
+	*)
+	    echo "[!] Bad URL: $1!"
+	    show_help
+	    exit 1
+	    ;;
+    esac
+    shift
+done
