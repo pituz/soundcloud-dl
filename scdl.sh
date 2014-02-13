@@ -51,13 +51,15 @@ function downsong() {
 	$3=="byArtist" {artist=$21}
 	$11=="genre search-deprecation-notification" {genre=$17}
 	$3=="artwork-download-link" {imageurl=$7}
-	#	   0	     1		  2	        3	     4
-	END {print id; print title; print artist; print genre; print imageurl}
+	$32=="clientID" {clientID=$34}
+	#	   0	     1		  2	        3	     4		     5
+	END {print id; print title; print artist; print genre; print imageurl; print clientID}
     ' | recode html..u8 | sed 's/\\u0026/\&/g' | (
 	readarray -t songpage
 	filename=$(echo "${songpage[1]}.mp3" | tr '*/\?"<>|' '+       ' )
 	[ -e "$filename" ] && echo "[!] The song $filename has already been downloaded..." && return
-	songurl=$(download "https://api.sndcdn.com/i1/tracks/${songpage[0]}/streams?client_id=$clientID" | cut -d '"' -f 4 | sed 's/\\u0026/\&/g')
+	songurl=$(download "https://api.sndcdn.com/i1/tracks/${songpage[0]}/streams?client_id=${songpage[5]}" |
+	    cut -d '"' -f 4 | sed 's/\\u0026/\&/g')
 	imageurl="${songpage[4]/original/t500x500}"; imageurl="${imageurl/png/jpg}"
         echo "[-] Downloading $title..."
 	download -v "$songurl" "$filename"
@@ -139,6 +141,7 @@ function downset() {
     page=$(download "$url")
     settitle=$(echo -e "$page" | grep -A1 "<em itemprop=\"name\">" | tail -n1) 
     setsongs=$(echo "$page" | grep -oE "data-sc-track=.[0-9]*" | grep -oE "[0-9]*" | sort | uniq) 
+    clientID=$(echo "$page" | awk -F'"|<|>' '$32=="clientID" {print $34}')
     echo "[i] Found set "$settitle""
     if [ -z "$setsongs" ]; then
         echo "[!] No songs found"
@@ -227,7 +230,6 @@ if [ -z "$1" ] || [ "$1" == "-h" ] || [ "$1" == "--help" ] ; then
     exit 1
 fi
 
-clientID="b45b1aa10f1ac2941910a7f0d10f8e28"
 writags=1
 curlinstalled=`command -V curl &>/dev/null`
 wgetinstalled=`command -V wget &>/dev/null`
