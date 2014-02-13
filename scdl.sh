@@ -41,29 +41,30 @@ function settags() {
     fi
 }
 
-function downsong() { #Done!
+function downsong() {
     # Grab Info
     url="$1"
     echo "[i] Grabbing song page"
-    page=$(download "$url")
-    id=$(echo "$page" | grep -v "small" | grep -oE "data-sc-track=.[0-9]*" | grep -oE "[0-9]*" | sort | uniq)
-    title=$(echo -e "$page" | grep -A1 "<em itemprop=\"name\">" | tail -n1 | sed 's/\\u0026/\&/g' | recode html..u8)
-    filename=$(echo "$title".mp3 | tr '*/\?"<>|' '+       ' )
-    songurl=$(curl -s -L --user-agent 'Mozilla/5.0' "https://api.sndcdn.com/i1/tracks/$id/streams?client_id=$clientID" | cut -d '"' -f 4 | sed 's/\\u0026/\&/g')
-    artist=$(echo "$page" | grep byArtist | sed 's/.*itemprop="name">\([^<]*\)<.*/\1/g' | recode html..u8)
-    imageurl=$(echo "$page" | tr ">" "\n" | grep -A1 '<div class="artwork-download-link"' | cut -d '"' -f 2 | tr " " "\n" | grep 'http' | sed 's/original/t500x500/g' | sed 's/png/jpg/g' )
-    genre=$(echo "$page" | tr ">" "\n" | grep -A1 '<span class="genre search-deprecation-notification" data="/tags/' | tr ' ' "\n" | grep '</span' | cut -d "<" -f 1 | recode html..u8)
-    # DL
-    echo ""
-    if [ -e "$filename" ]; then
-        echo "[!] The song $filename has already been downloaded..."  && return
-    else
+    download "$url" | awk -F'"|<|>' '
+	$3=="haudio large mode player" {id=$5}
+	/<em itemprop="name">/ {getline; title=$0}
+	$3=="byArtist" {artist=$21}
+	$11=="genre search-deprecation-notification" {genre=$17}
+	$3=="artwork-download-link" {imageurl=$7}
+	#	   0	     1		  2	        3	     4
+	END {print id; print title; print artist; print genre; print imageurl}
+    ' | recode html..u8 | sed 's/\\u0026/\&/g' | (
+	readarray -t songpage
+	filename=$(echo "${songpage[1]}.mp3" | tr '*/\?"<>|' '+       ' )
+	[ -e "$filename" ] && echo "[!] The song $filename has already been downloaded..." && return
+	songurl=$(download "https://api.sndcdn.com/i1/tracks/${songpage[0]}/streams?client_id=$clientID" | cut -d '"' -f 4 | sed 's/\\u0026/\&/g')
+	imageurl="${songpage[4]/original/t500x500}"; imageurl="${imageurl/png/jpg}"
         echo "[-] Downloading $title..."
-    fi
-    download -v "$songurl" "$(echo -e "$filename")"
-    settags "$artist" "$title" "$filename" "$genre" "$imageurl"
-    echo "[i] Downloading of $filename finished"
-    echo ''
+	download -v "$songurl" "$filename"
+	settags "${songpage[2]}" "${songpage[1]}" "$filename" "${songpage[3]}" "$imageurl"
+	echo "[i] Downloading of $filename finished"
+	echo ''
+    )
 }
 
 function downallsongs() {
