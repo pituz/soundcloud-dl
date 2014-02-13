@@ -138,50 +138,20 @@ function downset() {
     # Grab Info
     echo "[i] Grabbing set page"
     url="$1"
-    page=$(download "$url")
-    settitle=$(echo -e "$page" | grep -A1 "<em itemprop=\"name\">" | tail -n1) 
-    setsongs=$(echo "$page" | grep -oE "data-sc-track=.[0-9]*" | grep -oE "[0-9]*" | sort | uniq) 
-    clientID=$(echo "$page" | awk -F'"|<|>' '$32=="clientID" {print $34}')
-    echo "[i] Found set "$settitle""
-    if [ -z "$setsongs" ]; then
-        echo "[!] No songs found"
-        exit 1
-    fi
-    songcountset=$(echo "$setsongs" | wc -l)
-    echo "[i] Found $songcountset songs"
-    echo ""
-    for (( numcursong=1; numcursong <= $songcountset; numcursong++ ))
-    do
-        id=$(echo "$setsongs" | sed -n "$numcursong"p)
-        title=$(echo -e "$page" | grep data-sc-track | grep $id | grep -oE 'rel=.nofollow.>[^<]*' | sed 's/rel="nofollow">//' | sed 's/\\u0026/\&/g' | recode html..u8)
-        if [[ "$title" == "Play" ]] ; then
-        title=$(echo -e "$page" | grep $id | grep id | grep -oE "\"title\":\"[^\"]*" | sed 's/"title":"//' | sed 's/\\u0026/\&/g' | recode html..u8)
-        fi
-        artist=$(echo "$page" | grep -A3 $id | grep byArtist | cut -d"\"" -f2 | recode html..u8)
-        filename=$(echo "$title".mp3 | tr '*/\?"<>|' '+       ' )      
-        if [ -e "$filename" ]; then
-            echo "[!] The song $filename has already been downloaded..."  && continue
-        else
-            echo "[-] Downloading $title..."
-        fi
-        #----------settags-------#
-        pageurl=$(echo "$page" | grep -A3 $id | grep url | cut -d"\"" -f2)
-        if $curlinstalled; then
-        songpage=$(curl -s -L --user-agent 'Mozilla/5.0' "$pageurl")
-        else
-        songpage=$(wget --max-redirect=1000 --trust-server-names --progress=bar -U -O- 'Mozilla/5.0' "$pageurl")
-        fi
-        imageurl=$(echo "$songpage" | tr ">" "\n" | grep -A1 '<div class="artwork-download-link"' | cut -d '"' -f 2 | tr " " "\n" | grep 'http' | sed 's/original/t500x500/g' | sed 's/png/jpg/g' )
-        genre=$(echo "$songpage" | tr ">" "\n" | grep -A1 '<span class="genre search-deprecation-notification" data="/tags/' | tr ' ' "\n" | grep '</span' | cut -d "<" -f 1 | recode html..u8)
-        album=$(echo "$page" | sed s/'<meta content='/\n/g | grep 'property="og:title"' | cut -d '=' -f 4 | cut -d '"' -f 4 | recode html..u8)
-        #------------------------#
-        # DL
-	songurl=$(download "https://api.sndcdn.com/i1/tracks/$id/streams?client_id=$clientID" | cut -d '"' -f 4 | sed 's/\\u0026/\&/g')
-	download -v "$songurl" "$(echo -e "$filename")"
-        settags "$artist" "$title" "$filename" "$genre" "$imageurl" "$album"
-        echo "[i] Downloading of $filename finished"
-        echo ''
-    done
+    download "$url" | awk -F'"|<|>' '
+	/<h1 class="with-artwork"/ {getline; print}
+	/itemprop="numTracks"/ {print $5}
+	$14==" data-sc-track=" {print $29}
+	$6==" data-sc-track=" {print $21}
+    ' | recode html..u8 | sed 's/\\u0026/\&/g' | (
+	read settitle
+	read numsongs
+	echo "[i] Found set $settitle [$numsongs songs]"
+        [ "$numsongs" -gt 0 ] || { echo "[!] No songs found"; exit 1; }
+	while read songurl; do
+	    downsong "http://soundcloud.com$songurl"
+	done
+    )
 }
 
 function downallsets() {
