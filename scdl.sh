@@ -90,25 +90,28 @@ function downallsongs() {
 	kind=="track" && ($2~"^(genre|title|artwork-url)$") {print $3}
 	kind=="playlist" && $2=="permalink-url" {print $3; kind=""}
     ' | recode html..u8 | while read kind id; do
-	if [ "$kind" = "playlist" ]; then
-	    read playlisturl
-	    echo "[i] *--------Donwloading a set----------*"
-	    downset $playlisturl
-	    echo "[i] *-------- Set Downloaded -----------*"
-	    echo ''
-	else
-	    read genre
-	    read title
-	    read imageurl
-	    filename=$(echo "$title".mp3 | tr '*/\?"<>|' '+       ' )
-	    [ -e "$filename" ] && echo "[!] The song $filename has already been downloaded..."  && continue
-	    echo "[-] Downloading the song $title..."
-	    songurl=$(download "https://api.sndcdn.com/i1/tracks/$id/streams?client_id=$clientID" | cut -d '"' -f 4 | sed 's/\\u0026/\&/g')
-	    download -cv "$songurl" "$(echo -e "$filename")"
-	    settags "$artist" "$title" "$filename" "$genre" "${imageurl/large/t500x500}"
-	    echo "[i] Downloading of $filename finished"
-	    echo ''
-	fi
+	case "$kind" in
+	    playlist)
+		read playlisturl
+		echo "[i] *--------Donwloading a set----------*"
+		downset $playlisturl
+		echo "[i] *-------- Set Downloaded -----------*"
+		echo ''
+	    ;;
+	    track)
+		read genre
+		read title
+		read imageurl
+		filename=$(echo "$title".mp3 | tr '*/\?"<>|' '+       ' )
+		[ -e "$filename" ] && echo "[!] The song $filename has already been downloaded..."  && continue
+		echo "[-] Downloading the song $title..."
+		songurl=$(download "https://api.sndcdn.com/i1/tracks/$id/streams?client_id=$clientID" | tee /dev/stderr | cut -d '"' -f 4 | sed 's/\\u0026/\&/g')
+		download -cv "$songurl" "$(echo -e "$filename")"
+		settags "$artist" "$title" "$filename" "$genre" "${imageurl/large/t500x500}"
+		echo "[i] Downloading of $filename finished"
+		echo ''
+	    ;;
+	esac
     done
 }
 
