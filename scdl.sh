@@ -73,44 +73,36 @@ function downallsongs() {
     # Grab Info
     url="$1"
     echo "[i] Grabbing artists page"
-    page=$(download "$url")
-    clientID=$(echo "$page" | grep "clientID" | tr "," "\n" | grep "clientID" | cut -d '"' -f 4)
-    artistID=$(echo "$page" | tr "," "\n" | grep "trackOwnerId" | head -n 1 | cut -d ":" -f 2) 
+    IDs=( $(download "$url" | sed -n '
+	s/^.*"clientID":"\([a-z0-9]\+\)".*$/\1/p
+	s#^.*http://api.soundcloud.com/users/\([0-9]\+\).*$#\1#p ') )
+    clientID=${IDs[0]}; artistID=${IDs[1]} 
     echo "[i] Grabbing all song info"
-    songs=$(download "https://api.sndcdn.com/e1/users/$artistID/sounds?limit=256&offset=0&linked_partitioning=1&client_id=$clientID"  | tr -d "\n" | sed 's/<stream-item>/\n/g' | sed '1d' )
-    songcount=$(echo "$songs" | wc -l)
-    echo "[i] Found $songcount songs! (200 is max)"
-    if [ -z "$songs" ]; then
-        echo "[!] No songs found at $1" && exit
-    fi
-    echo ""
-    for (( i=1; i <= $songcount; i++ ))
-    do
-        playlist=$(echo -e "$songs"| sed -n "$i"p | tr ">" "\n" | grep "</kind" | cut -d "<" -f 1 | grep playlist)
-        if [ "$playlist" = "playlist" ] ; then 
-            playlisturl=$(echo -e "$songs" | sed -n "$i"p | tr ">" "\n" | grep "</permalink-url" | cut -d "<" -f 1 | head -n 1 | recode html..u8)
-            echo "[i] *--------Donwloading a set----------*"
-            downset $playlisturl
-            echo "[i] *-------- Set Downloaded -----------*"
-            echo ''
-        else
-            title=$(echo -e "$songs" | sed -n "$i"p | tr ">" "\n" | grep "</title" | cut -d "<" -f 1 | recode html..u8)
-            filename=$(echo "$title".mp3 | tr '*/\?"<>|' '+       ' )
-            if [ -e "$filename" ]; then
-                echo "[!] The song $filename has already been downloaded..."  && continue
-            fi
-            artist=$(echo "$songs" | sed -n "$i"p | tr ">" "\n" | grep "</username" | cut -d "<" -f 1 | recode html..u8)
-            genre=$(echo "$songs" | sed -n "$i"p | tr ">" "\n" | grep "</genre" | cut -d "<" -f 1 | recode html..u8)
-            imageurl=$(echo "$songs" | sed -n "$i"p | tr ">" "\n" | grep "</artwork-url" | cut -d "<" -f 1 | sed 's/large/t500x500/g')
-            songID=$(echo "$songs" | sed -n "$i"p | tr " " "\n" | grep "</id>" | head -n 1 | cut -d ">" -f 2 | cut -d "<" -f 1)
-            # DL
-            echo "[-] Downloading the song $title..."
-	    songurl=$(download "https://api.sndcdn.com/i1/tracks/$songID/streams?client_id=$clientID" | cut -d '"' -f 4 | sed 's/\\u0026/\&/g')
+    download "https://api.sndcdn.com/e1/users/$artistID/sounds?limit=256&offset=0&linked_partitioning=1&client_id=$clientID" | awk -F'<|>' '
+	/^ {6}<kind>/ {kind=$3}
+	/^ {6}<id / {print kind " " $3}
+	kind=="track" && ($2~"^(genre|title|artwork-url)$") {print $3}
+	kind=="playlist" && $2=="permalink-url" {print $3; kind=""}
+    ' | recode html..u8 | while read kind id; do
+	if [ "$kind" = "playlist" ]; then
+	    read playlisturl
+	    echo "[i] *--------Donwloading a set----------*"
+	    downset $playlisturl
+	    echo "[i] *-------- Set Downloaded -----------*"
+	    echo ''
+	else
+	    read genre
+	    read title
+	    read imageurl
+	    filename=$(echo "$title".mp3 | tr '*/\?"<>|' '+       ' )
+	    [ -e "$filename" ] && echo "[!] The song $filename has already been downloaded..."  && continue
+	    echo "[-] Downloading the song $title..."
+	    songurl=$(download "https://api.sndcdn.com/i1/tracks/$id/streams?client_id=$clientID" | cut -d '"' -f 4 | sed 's/\\u0026/\&/g')
 	    download -v "$songurl" "$(echo -e "$filename")"
-            settags "$artist" "$title" "$filename" "$genre" "$imageurl"
-            echo "[i] Downloading of $filename finished"
-            echo ''
-        fi
+	    settags "$artist" "$title" "$filename" "$genre" "${imageurl/large/t500x500}"
+	    echo "[i] Downloading of $filename finished"
+	    echo ''
+	fi
     done
 }
 
