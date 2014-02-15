@@ -31,20 +31,26 @@ download() {
 }
 
 function settags() {
-    artist=$1
-    title=$2
-    filename=$3
-    genre=$4
-    imageurl=$5
-    album=$6
-    download "$imageurl" "/tmp/1.jpg"
-    if [ "$writags" = "1" ] ; then
-        eyeD3 --remove-all "$filename" &>/dev/null
-        eyeD3 --add-image="/tmp/1.jpg:ILLUSTRATION" --add-image="/tmp/1.jpg:ICON" -a "$artist" -Y $(date +%Y) -G "$genre" -t "$title" -A "$album" -2 --force-update "$filename" &>/dev/null
-        echo '[i] Setting tags finished!'
-    else
+    ((writags)) || { 
         echo "[i] Setting tags skipped (please install eyeD3)"
-    fi
+	return 1
+    }
+    local imagefile="/tmp/$(basename "$0").$$.jpg"
+    local eyeD3opts
+    eyeD3opts=(
+	"--artist=$1"
+	"--title=$2"
+        "$3"  # filename
+        "--genre=$4"
+        "--album=$6"
+    )
+    download "$5" "$imagefile" && eyeD3opts+=(
+	"--add-image=$imagefile:ILLUSTRATION"
+	"--add-image=$imagefile:ICON" )
+    eyeD3 --remove-all "$filename" &>/dev/null
+    eyeD3 "${eyeD3opts[@]}" -2 --force-update "$filename" &>/dev/null
+    rm $imagefile
+    echo '[i] Setting tags finished!'
 }
 
 function downsong() {
