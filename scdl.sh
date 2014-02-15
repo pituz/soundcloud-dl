@@ -10,7 +10,7 @@ echo '|      SoundcloudMusicDownloader(cURL/Wget version) |   FlyinGrub rework  
 echo ' *---------------------------------------------------------------------------*'
 
 download() {
-    local verbose cont opt opts
+    local verbose cont out opt opts OPTIND
     while getopts "cv" opt; do
 	case "$opt" in
 	    c) cont=1;;
