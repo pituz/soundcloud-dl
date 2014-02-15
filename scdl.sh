@@ -111,7 +111,7 @@ function downallsongs() {
 		filename=$(echo "$title".mp3 | tr '*/\?"<>|' '+       ' )
 		[ -e "$filename" ] && echo "[!] The song $filename has already been downloaded..."  && continue
 		echo "[-] Downloading the song $title..."
-		songurl=$(download "https://api.sndcdn.com/i1/tracks/$id/streams?client_id=$clientID" | tee /dev/stderr | cut -d '"' -f 4 | sed 's/\\u0026/\&/g')
+		songurl=$(download "https://api.sndcdn.com/i1/tracks/$id/streams?client_id=$clientID" | cut -d '"' -f 4 | sed 's/\\u0026/\&/g')
 		download -cv "$songurl" "$(echo -e "$filename")"
 		settags "$artist" "$title" "$filename" "$genre" "${imageurl/large/t500x500}"
 		echo "[i] Downloading of $filename finished"
