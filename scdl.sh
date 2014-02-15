@@ -109,21 +109,16 @@ function downallsongs() {
 function downgroup() {
     groupurl="$1"
     echo "[i] Grabbing group page"
-    grouppage=$(download "$groupurl")
-    groupid=$(echo "$groupage" | grep "html5-code-groups" | tr " " "\n" | grep "html5-code-groups-" | cut -d '"' -f 2 | sed '2d' | cut -d '-' -f 4)
-    clientID=$(echo "$groupage" | grep "clientID" | tr "," "\n" | grep "clientID" | cut -d '"' -f 4)
-    trackspage=$(curl -L -s --user-agent 'Mozilla/5.0' "http://api.soundcloud.com/groups/$groupid/tracks.json?client_id=$clientID" | tr "}" "\n")
-    trackspage=$(echo "$trackspage" | tr "," "\n" | grep '"permalink_url":' | sed '1d' | sed -n '1~2p')
-    songcount=$(echo "$trackspage" | wc -l)
-    echo "[i] Found $songcount songs!"
-    for (( i=1; i <= $songcount; i++ ))
-    do
-        echo ''
-        echo "---------- Downloading Song n°$i ----------"
-        thisongurl=$(echo "$trackspage" | sed -n "$i"p | cut -d '"' -f 4)
-        downsong "$thisongurl"
-        echo "----- Downloading Song n°$i finished ------"
-    done
+    IDs=( $(download "$groupurl" | sed -n '
+	s/^.*"clientID":"\([a-z0-9]\+\)".*$/\1/p
+	s#^.*http://api.soundcloud.com/groups/\([0-9]\+\).*$#\1#p ') )
+    clientID=${IDs[0]}; groupid=${IDs[1]}
+    download "http://api.soundcloud.com/groups/$groupid/tracks.json?client_id=$clientID" \
+	| tr '}' "\n" \
+	| sed -n '/"kind":"user"/d; s/^.*"permalink_url":"\([^"]\+\)".*$/\1/p' \
+	| while read thisongurl; do
+	    downsong "$thisongurl"
+	done
 }
 
 function downset() {
