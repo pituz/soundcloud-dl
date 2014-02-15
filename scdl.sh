@@ -10,18 +10,24 @@ echo '|      SoundcloudMusicDownloader(cURL/Wget version) |   FlyinGrub rework  
 echo ' *---------------------------------------------------------------------------*'
 
 download() {
-    local verbose
-    if [ "$1" = "-v" ]; then
-	verbose=1
-	shift
-    fi
+    local verbose cont opt opts
+    while getopts "cv" opt; do
+	case "$opt" in
+	    c) cont=1;;
+	    v) verbose=1;;
+	esac
+    done
+    shift $((OPTIND-1))
+    [ "$cont" ] && out="$2.part" || out="${2--}"
     if [ "$curlinstalled" ]; then
-	[ "$verbose" ] && verbose="-#" || verbose="-s"
-        curl $verbose -L --user-agent 'Mozilla/5.0' "$1" -o "${2--}"
+	[ "$verbose" ] && opts="-#" || opts="-s"
+	[ "$cont" ] && [ -f "$out" ] && opts+=" -C -"
+        curl $opts -L --user-agent 'Mozilla/5.0' "$1" -o "$out"
     else
 	[ "$verbose" ] && verbose="--progress=bar" || verbose="-q"
-        wget $verbose --max-redirect=1000 --trust-server-names -U 'Mozilla/5.0' -O "${2--}" "$1"
+        wget $verbose --max-redirect=1000 --trust-server-names -U 'Mozilla/5.0' -O "$out" "$1" "${cont+-c}"
     fi
+    [ "$?" = 0 ] && [ "$cont" ] && mv "$out" "${out%.part}"
 }
 
 function settags() {
@@ -61,8 +67,8 @@ function downsong() {
 	songurl=$(download "https://api.sndcdn.com/i1/tracks/${songpage[0]}/streams?client_id=${songpage[5]}" |
 	    cut -d '"' -f 4 | sed 's/\\u0026/\&/g')
 	imageurl="${songpage[4]/original/t500x500}"; imageurl="${imageurl/png/jpg}"
-        echo "[-] Downloading $title..."
-	download -v "$songurl" "$filename"
+        echo "[-] Downloading ${songpage[1]}..."
+	download -cv "$songurl" "$filename"
 	settags "${songpage[2]}" "${songpage[1]}" "$filename" "${songpage[3]}" "$imageurl"
 	echo "[i] Downloading of $filename finished"
 	echo ''
@@ -98,7 +104,7 @@ function downallsongs() {
 	    [ -e "$filename" ] && echo "[!] The song $filename has already been downloaded..."  && continue
 	    echo "[-] Downloading the song $title..."
 	    songurl=$(download "https://api.sndcdn.com/i1/tracks/$id/streams?client_id=$clientID" | cut -d '"' -f 4 | sed 's/\\u0026/\&/g')
-	    download -v "$songurl" "$(echo -e "$filename")"
+	    download -cv "$songurl" "$(echo -e "$filename")"
 	    settags "$artist" "$title" "$filename" "$genre" "${imageurl/large/t500x500}"
 	    echo "[i] Downloading of $filename finished"
 	    echo ''
