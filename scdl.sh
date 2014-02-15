@@ -15,7 +15,7 @@ download() {
 	verbose=1
 	shift
     fi
-    if $curlinstalled; then
+    if [ "$curlinstalled" ]; then
 	[ "$verbose" ] && verbose="-#" || verbose="-s"
         curl $verbose -L --user-agent 'Mozilla/5.0' "$1" -o "${2--}"
     else
@@ -188,12 +188,12 @@ if [ -z "$1" ] || [ "$1" == "-h" ] || [ "$1" == "--help" ] ; then
 fi
 
 writags=1
-curlinstalled=`command -V curl &>/dev/null`
-wgetinstalled=`command -V wget &>/dev/null`
+curlinstalled=$(command -v curl)
+wgetinstalled=$(command -v wget)
 
-if $curlinstalled; then
+if [ "$curlinstalled" ]; then
   echo "[i] Using" `curl -V` | cut -c-21
-elif $wgetinstalled; then
+elif [ "$wgetinstalled" ]; then
   echo "[i] Using" `wget -V` | cut -c-24
   echo "[i] cURL is preferred" 
 else
